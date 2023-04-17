@@ -30,7 +30,6 @@
 class Server {
 private:
     enum{
-        // port_ = 8001,
         first_id_ = 1,
         handle_clients_thread_sleep_ = 3000
     };
@@ -43,8 +42,16 @@ private:
     static std::list<std::shared_ptr<Client>>clientsList_; // Список клиентов (общие данные обоих потоков)
     static std::mutex mtx; // mutex для clientsList_
 public:
-    [[noreturn]] static void accept_thread(int port); // Поток поключения и добавления новых клиентов в clientsList_
-    [[noreturn]] static void handle_clients_thread(); // Поток обработки clientsList_, в том числе и удаления
+    /**
+     * Поток поключения и добавления новых клиентов в clientsList_
+     * @param port - порт программы, по умолчанию 8001
+     */
+    [[noreturn]] static void accept_thread(int port = 8001);
+
+    /**
+     * Поток обработки clientsList_, в том числе и удаления
+     */
+    [[noreturn]] static void handle_clients_thread();
 };
 
 
