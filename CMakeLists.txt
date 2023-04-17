@@ -11,8 +11,11 @@ IF(Boost_FOUND)
     LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 ENDIF(Boost_FOUND)
 
+SET(Source Source)
+
 SET(USED_LIBS ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_LOG_LIBRARY})
 
-add_executable(${PROJECT_NAME} Sourse/main.cpp Sourse/Server.cpp Sourse/Server.h Sourse/Client.cpp Sourse/Client.h Sourse/init_log.h Sourse/signalHandler.h)
+add_executable(${PROJECT_NAME} ${Source}/main.cpp ${Source}/Server.cpp ${Source}/Server.h ${Source}/Client.cpp
+        ${Source}/Client.h ${Source}/init_log.h ${Source}/signalHandler.h)
 
 target_link_libraries(${PROJECT_NAME} -lboost_log_setup ${USED_LIBS} )
