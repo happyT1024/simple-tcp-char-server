@@ -5,3 +5,5 @@ cmake-build-debug
 /.idea/modules.xml
 /.idea/simple-tcp-char-server.iml
 /.idea/vcs.xml
+
+cmake-build-release
