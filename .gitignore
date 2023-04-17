@@ -1,1 +1,7 @@
 cmake-build-debug
+/.idea/.gitignore
+/.idea/.name
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/simple-tcp-char-server.iml
+/.idea/vcs.xml
