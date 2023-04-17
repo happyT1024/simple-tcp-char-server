@@ -26,7 +26,7 @@ void Server::accept_thread(int port) {
 
             acceptor.accept(client->sock());
             client->update_ping();
-            BOOST_LOG_TRIVIAL(info) << "USER id:" << client->getUserID() << " connect to server";
+            BOOST_LOG_TRIVIAL(info) << "USER id:" << client->get_id() << " connect to server";
             client->write(greetings);
             BOOST_LOG_TRIVIAL(trace) << "greetings send";
 
@@ -34,7 +34,7 @@ void Server::accept_thread(int port) {
             BOOST_LOG_TRIVIAL(trace) << "mtx lock tread accept_thread";
 
             clientsList_.push_back(client);
-            BOOST_LOG_TRIVIAL(debug) << "USER id:" << client->getUserID() << " add to ClientsList";
+            BOOST_LOG_TRIVIAL(debug) << "USER id:" << client->get_id() << " add to ClientsList";
             BOOST_LOG_TRIVIAL(debug) << "ClientsList size = " << clientsList_.size();
 
             mtx.unlock();
@@ -76,7 +76,7 @@ void Server::handle_clients_thread() {
                             clientsList_.end(),
                             [&](const std::shared_ptr<Client> &Client) -> bool {
                                 if (Client->get_user_exit()) {
-                                    BOOST_LOG_TRIVIAL(info) << "USER id:" << Client->getUserID() << " delete";
+                                    BOOST_LOG_TRIVIAL(info) << "USER id:" << Client->get_id() << " delete";
                                     messages_.emplace("Server", Client->get_username() + " leave the chat");
                                 };
                                 return Client->get_user_exit();

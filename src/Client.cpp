@@ -12,7 +12,7 @@ boost::asio::ip::tcp::socket &Client::sock() {
     return sock_;
 }
 
-unsigned long long Client::getUserID() const {
+unsigned long long Client::get_id() const {
     return id_;
 }
 
@@ -21,7 +21,9 @@ void Client::answer_to_client() {
         read_request();
         process_request();
     } catch (boost::system::system_error &) {
-        // это исключение никогда не вылезало
+        /**
+         * это исключение никогда не вылезало
+         */
         BOOST_LOG_TRIVIAL(error)<<"User id:"<<id_<<" answer_to_client -> system_error";
         stop();
     }
@@ -39,7 +41,9 @@ void Client::write(std::string &msg) {
     try {
         sock_.write_some(boost::asio::buffer(msg));
     }catch(boost::wrapexcept<boost::system::system_error> e){
-        // может случиться когда пользователь вышел, стандартная ситуация
+        /**
+         * может случиться когда пользователь закрыл соединение, но его еще не удалили, стандартная ситуация
+         */
         BOOST_LOG_TRIVIAL(info)<<"User id:"<<id_<<" close connect, msg not send";
         stop();
     }
@@ -67,10 +71,8 @@ void Client::read_request() {
 void Client::init_username(std::string &username) {
     if (username.size() > max_username) {
         BOOST_LOG_TRIVIAL(debug) << "USER id:" << id_ << " send very big username";
-        sock_.write_some(boost::asio::buffer(
-                std::string(
-                        "Тame cannot be longer than " + std::to_string(max_username) + " characters\nTry again: "
-                )));
+        std::string msg("Username cannot be longer than " + std::to_string(max_username) + " characters\nTry again: ");
+        write(msg);
         return;
     }
     username_ = username;
