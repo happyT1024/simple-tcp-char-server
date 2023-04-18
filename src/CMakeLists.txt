@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.22)
 project(${PROJECT_NAME}_bin)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -17,4 +17,3 @@ add_executable(${PROJECT_NAME} main.cpp Server.cpp Server.h Client.cpp Client.h 
 add_library(SimpleTCPChat_lib main.cpp Server.cpp Server.h Client.cpp Client.h init_log.h signalHandler.h)
 
 target_link_libraries(${PROJECT_NAME} -lboost_log_setup ${USED_LIBS} )
-
