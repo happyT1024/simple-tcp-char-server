@@ -12,16 +12,18 @@
  * По умолчанию 8001
  *
  * -l: логи
- * По умолчанию 2
+ * По умолчанию 1
  * 0 - все логи
  * 1 - дебаг
  * 2 - продакшен
  */
 
 int main(int argc, char *argv[]) {
+    signal(SIGTERM, signalHandler); // обработка стандартного завершения работы программы
+    signal(SIGINT, signalHandler);
 
     int port = 8001;
-    int logs = 2;
+    int logs = 1;
     for(int i=1;i<argc;++i){
         if(std::string(argv[i])=="-p"){
             i++;
@@ -47,7 +49,7 @@ int main(int argc, char *argv[]) {
             init_production_log();
             break;
         default:
-            std::cout<<"\n";
+            std::cout<<"Неправильные параметры запуска\n";
             return 1;
     }
 
@@ -55,7 +57,6 @@ int main(int argc, char *argv[]) {
 
     BOOST_LOG_TRIVIAL(info)<<"Server started at port: "<<port<<" logs type: "<<logs;
 
-    signal(SIGTERM, signalHandler); // обработка стандартного завершения работы программы
 
     boost::thread_group threads;
 
