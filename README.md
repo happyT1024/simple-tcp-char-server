@@ -119,14 +119,14 @@ for (const auto &x: clientsList_) {
 ```c++
 clientsList_.erase(
     std::remove_if(
-    clientsList_.begin(),
-    clientsList_.end(),
-    [&](const std::shared_ptr<Client> &Client) -> bool {
-        if (Client->get_user_exit()) {
-            messages_.emplace("Server", Client->get_username() + " leave the chat");
-        };
-        return Client->get_user_exit();
-    }),
+        clientsList_.begin(),
+        clientsList_.end(),
+        [&](const std::shared_ptr<Client> &Client) -> bool {
+            if (Client->get_user_exit()) {
+                messages_.emplace("Server", Client->get_username() + " leave the chat");
+            };
+            return Client->get_user_exit();
+        }),
     clientsList_.end());
 ```
 
