@@ -8,6 +8,8 @@
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/log/trivial.hpp>
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include <queue>
 
@@ -73,9 +75,12 @@ public:
      */
     bool user_is_ok();
 private:
-    /**
-     * @return True если пользователь не пинговался более чем timed_out_ (60000 мс.)
-     */
+    FRIEND_TEST(Client, getUsername);
+    FRIEND_TEST(Client, init_username);
+
+        /**
+         * @return True если пользователь не пинговался более чем timed_out_ (60000 мс.)
+         */
     bool timed_out() const; // True -> пользователь не пинговался более чем timed_out_ (60000 мс.)
 
     /**

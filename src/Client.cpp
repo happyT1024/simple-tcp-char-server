@@ -69,6 +69,9 @@ void Client::read_request() {
 }
 
 void Client::init_username(std::string &username) {
+    if(username.empty()){
+        return;
+    }
     if (username.size() > max_username) {
         BOOST_LOG_TRIVIAL(debug) << "USER id:" << id_ << " send very big username";
         std::string msg("Username cannot be longer than " + std::to_string(max_username) + " characters\nTry again: ");

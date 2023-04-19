@@ -4,10 +4,40 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include "../src/Client.h"
 
-TEST(test_case_name, test_name)
-{
-    ASSERT_EQ(1, 1) << "1 is not equal 0";
+boost::asio::io_service service;
+
+TEST(Client, getUsername){
+    std::queue<std::pair<std::string, std::string>> messages;
+    unsigned long long int id=1;
+    Client client(messages, service, id);
+    // В начале имя пользователя должно быть пусто
+    ASSERT_EQ(client.get_username(), "");
+    std::string name("NAME");
+    client.username_ = name;
+    ASSERT_EQ(client.get_username(), name);
+}
+
+TEST(Client, init_username){
+    std::queue<std::pair<std::string, std::string>> messages;
+    unsigned long long int id=1;
+    Client client(messages, service, id);
+    std::string name = "";
+
+    client.init_username(name);
+    // имя пользователя не должно пройти, поэтому список новых сообщений будет пуст
+    ASSERT_TRUE(messages.empty());
+    name = std::string("a", client.max_username);
+    client.init_username(name);
+    ASSERT_EQ(client.get_username(), name);
+    // А тут уже должно добавиться новое сообщение
+    ASSERT_FALSE(messages.empty());
+    client.username_="";
+    name = std::string("a", client.max_username+1);
+    client.init_username(name);
+    ASSERT_NE(client.get_username(), name);
+    client.username_="";
 }
 
 int main(int argc, char **argv){
