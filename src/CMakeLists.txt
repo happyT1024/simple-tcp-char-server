@@ -17,3 +17,5 @@ add_executable(${PROJECT_NAME} main.cpp Server.cpp Server.h Client.cpp Client.h 
 add_library(SimpleTCPChat_lib main.cpp Server.cpp Server.h Client.cpp Client.h init_log.h signalHandler.h)
 
 target_link_libraries(${PROJECT_NAME} -lboost_log_setup ${USED_LIBS} )
+target_link_libraries(SimpleTCPChat_lib -lboost_log_setup ${USED_LIBS} )
+
