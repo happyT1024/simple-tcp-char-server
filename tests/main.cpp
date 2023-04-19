@@ -12,8 +12,10 @@ TEST(Client, getUsername){
     std::queue<std::pair<std::string, std::string>> messages;
     unsigned long long int id=1;
     Client client(messages, service, id);
-    // В начале имя пользователя должно быть пусто
-    ASSERT_EQ(client.get_username(), "");
+    /**
+     * В начале имя пользователя должно быть пустым
+     */
+    ASSERT_TRUE(client.get_username().empty());
     std::string name("NAME");
     client.username_ = name;
     ASSERT_EQ(client.get_username(), name);
@@ -26,12 +28,16 @@ TEST(Client, init_username){
     std::string name = "";
 
     client.init_username(name);
-    // имя пользователя не должно пройти, поэтому список новых сообщений будет пуст
+    /**
+     * имя пользователя не должно обновиться, поэтому список новых сообщений будет пуст
+     */
     ASSERT_TRUE(messages.empty());
     name = std::string("a", client.max_username);
     client.init_username(name);
     ASSERT_EQ(client.get_username(), name);
-    // А тут уже должно добавиться новое сообщение
+    /**
+     * А тут уже должно добавиться новое сообщение
+     */
     ASSERT_FALSE(messages.empty());
     client.username_="";
     name = std::string("a", client.max_username+1);
