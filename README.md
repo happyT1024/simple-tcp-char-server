@@ -176,3 +176,19 @@ cd ..
 cmake --build build --target SimpleTCPChat_bin -j 8
 mv build/src/SimpleTCPChat_bin SimpleTCPChat
 ```
+
+## Запуск тестов
+
+Не сильно отличается от компиляции.
+
+Тестов мало, зато они есть :)
+
+```bash
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+cd ..
+cmake --build build --target tests -j 8
+mv build/tests/tests tests
+./tests
+```
