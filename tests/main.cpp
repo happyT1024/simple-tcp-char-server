@@ -26,7 +26,6 @@ TEST(Client, init_username){
     unsigned long long int id=1;
     Client client(messages, service, id);
     std::string name = "";
-
     client.init_username(name);
     /**
      * имя пользователя не должно обновиться, поэтому список новых сообщений будет пуст
@@ -44,6 +43,22 @@ TEST(Client, init_username){
     client.init_username(name);
     ASSERT_NE(client.get_username(), name);
     client.username_="";
+}
+
+TEST(Client, user_is_ok){
+    std::queue<std::pair<std::string, std::string>> messages;
+    unsigned long long int id=1;
+    Client client(messages, service, id);
+    ASSERT_FALSE(client.user_is_ok());
+    std::string name("a", client.max_username+1);
+    client.init_username(name);
+    ASSERT_FALSE(client.user_is_ok());
+    name = "";
+    client.init_username(name);
+    ASSERT_FALSE(client.user_is_ok());
+    name = "trololo";
+    client.init_username(name);
+    ASSERT_TRUE(client.user_is_ok());
 }
 
 int main(int argc, char **argv){

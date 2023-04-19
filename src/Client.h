@@ -77,6 +77,7 @@ public:
 private:
     FRIEND_TEST(Client, getUsername);
     FRIEND_TEST(Client, init_username);
+    FRIEND_TEST(Client, user_is_ok);
 
         /**
          * @return True если пользователь не пинговался более чем timed_out_ (60000 мс.)
