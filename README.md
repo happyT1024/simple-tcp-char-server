@@ -189,6 +189,5 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 cd ..
 cmake --build build --target tests -j 8
-mv build/tests/tests tests
-./tests
+./build/tests/tests
 ```
