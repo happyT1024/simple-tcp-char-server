@@ -16,14 +16,14 @@ SET(USED_LIBS ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBR
 
 include_directories("headers")
 
-add_executable(${PROJECT_NAME} source/main.cpp source/Client.cpp source/Server.cpp source/settings.cpp)
+add_executable(${PROJECT_NAME} source/main.cpp source/Client.cpp source/Server.cpp)
 
 target_link_libraries(${PROJECT_NAME} -lboost_log_setup ${USED_LIBS} )
 
 if(TESTS)
     enable_testing()
     find_package(GTest REQUIRED)
-    add_library(${PROJECT_NAME}_lib source/main.cpp source/Client.cpp source/Server.cpp source/settings.cpp)
+    add_library(${PROJECT_NAME}_lib source/main.cpp source/Client.cpp source/Server.cpp)
     include_directories("tests")
     target_link_libraries(${PROJECT_NAME}_lib -lboost_log_setup ${USED_LIBS})
     add_executable(${PROJECT_NAME}_tests tests/main.cpp)
