@@ -4,7 +4,9 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "../src/Client.h"
+#include "init_log.h"
+
+#include "Client.h"
 
 boost::asio::io_service service;
 
@@ -62,8 +64,9 @@ TEST(Client, user_is_ok){
 }
 
 int main(int argc, char **argv){
+    init_test_log();
+    logging::add_common_attributes();
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::InitGoogleMock(&argc, argv);
-
     return RUN_ALL_TESTS();
 }

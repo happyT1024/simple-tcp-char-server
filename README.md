@@ -51,13 +51,13 @@ pkill SimpleTCPC
 
 Взаимодействие с сетью происходит при помощи библиотеки boost.asio. Все методы - синхронные. Вдохновила следующая статья: https://habr.com/ru/articles/195794/
 
-Потоки - boost.threads
+Потоки - BOOST.THREADS
 
-Логирование - boost.log
+Логирование - BOOST.LOG
 
-Контейнеры - почти всегда stl
+Контейнеры - STL
 
-Тесты - gtest
+Unit тесты - GTest
 
 ### Server
 
