@@ -20,7 +20,7 @@ add_executable(${PROJECT_NAME} source/main.cpp source/Client.cpp source/Server.c
 
 target_link_libraries(${PROJECT_NAME} -lboost_log_setup ${USED_LIBS} )
 
-if(TESTS)
+if(ON)
     enable_testing()
     find_package(GTest REQUIRED)
     add_library(${PROJECT_NAME}_lib source/main.cpp source/Client.cpp source/Server.cpp)
