@@ -1,0 +1,10 @@
+//
+// Created by matvey on 11.05.23.
+//
+
+#ifndef SIMPLETCPCHAT_SETTINGS_H
+#define SIMPLETCPCHAT_SETTINGS_H
+
+
+
+#endif //SIMPLETCPCHAT_SETTINGS_H

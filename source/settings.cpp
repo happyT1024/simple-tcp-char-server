@@ -25,3 +25,5 @@ void settings::Server::setTimeout(int timeout) {
 void settings::Server::setMaxUsername(int maxUsername) {
     max_username = maxUsername;
 }
+
+

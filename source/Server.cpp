@@ -12,7 +12,6 @@ std::mutex Server::mtx;
 
 void Server::accept_thread(int port) {
     try {
-
         BOOST_LOG_TRIVIAL(debug) << "Thread accept_thread enable";
         std::string greetings = "Welcome to Simple TCP Chat\n"
                                 "What is your name : ";
