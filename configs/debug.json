@@ -1,0 +1,19 @@
+{
+  "logLevel": 1,
+  "servers": [
+    {
+      "name" : "UDP Fans Server",
+      "port" : 8001,
+      "maxMsgSize" : 1024,
+      "timeout" : 60000,
+      "maxUsernameSize" : 12
+    },
+    {
+      "name" : "TCP Fans Server",
+      "port" : 8002,
+      "maxMsgSize" : 1024,
+      "timeout" : 60000,
+      "maxUsernameSize" : 12
+    }
+  ]
+}
