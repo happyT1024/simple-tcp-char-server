@@ -5,7 +5,7 @@ enable_testing()
 
 find_package(GTest REQUIRED)
 
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp init_log.h settings.h)
 
 target_link_libraries(${PROJECT_NAME} SimpleTCPChat_lib -lgtest -lpthread -lgmock)
 
