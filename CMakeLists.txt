@@ -14,7 +14,7 @@ ENDIF(Boost_FOUND)
 
 SET(USED_LIBS ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_LOG_LIBRARY})
 
-include_directories("headers")
+include_directories("header")
 
 add_executable(${PROJECT_NAME} source/main.cpp source/Client.cpp source/Server.cpp)
 
