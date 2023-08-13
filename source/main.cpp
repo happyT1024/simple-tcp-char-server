@@ -1,7 +1,7 @@
 #include <boost/thread.hpp>
-#include "Server.h"
-#include "init_log.h"
-#include "signalHandler.h"
+#include <Server/Server.h>
+#include <Utils/InitializationLog.h>
+#include <Utils/signalHandler.h>
 #include "settings.h"
 
 int main(int argc, char *argv[]) {

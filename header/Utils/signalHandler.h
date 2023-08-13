@@ -6,7 +6,7 @@
 #define SIMPLETCPCHAT_SIGNALHANDLER_H
 
 #include <csignal>
-#include "init_log.h"
+#include "InitializationLog.h"
 
 void signalHandler(int signum) {
     BOOST_LOG_TRIVIAL(info) << "Interrupt signal (" << signum << ") received";

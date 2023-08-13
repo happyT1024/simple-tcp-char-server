@@ -1,9 +1,4 @@
-//
-// Created by matvey on 11.05.23.
-//
-
-#ifndef SIMPLETCPCHAT_INITIALIZATIONLOG_H
-#define SIMPLETCPCHAT_INIT_LOG_H
+#pragma once
 
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
@@ -19,13 +14,7 @@ namespace src = boost::log::sources;
 namespace sinks = boost::log::sinks;
 namespace keywords = boost::log::keywords;
 
-void init_test_log()
-{
-    logging::core::get()->set_filter
-            (
-                    logging::trivial::severity > logging::trivial::fatal
-            );
-}
+void init_production_log();
+void init_debug_log();
+void init_deep_debug_log();
 
-
-#endif //SIMPLETCPCHAT_INITIALIZATIONLOG_H

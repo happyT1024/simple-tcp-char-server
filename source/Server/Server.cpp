@@ -2,7 +2,7 @@
 // Created by matvey on 09.04.23.
 //
 
-#include "Server.h"
+#include "Server/Server.h"
 
 unsigned long long Server::last_id_ = first_id_;
 std::queue<std::pair<std::string, std::string>> Server::messages_ = std::queue<std::pair<std::string, std::string>>();

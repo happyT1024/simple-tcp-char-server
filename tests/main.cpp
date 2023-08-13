@@ -6,7 +6,7 @@
 #include <gmock/gmock.h>
 #include "init_log.h"
 
-#include "Client.h"
+#include "Server/Client/Client.h"
 
 boost::asio::io_service service;
 

@@ -3,6 +3,7 @@ project(SimpleTCPChat)
 
 set(CMAKE_CXX_STANDARD 20)
 set(TESTS ON)
+set(SRC source/main.cpp)
 
 SET(Boost_USE_STATIC_LIBS OFF)
 SET(Boost_USE_MULTITHREAD ON)
@@ -16,14 +17,14 @@ SET(USED_LIBS ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBR
 
 include_directories("header")
 
-add_executable(${PROJECT_NAME} source/main.cpp source/Client.cpp source/Server.cpp)
+add_executable(${PROJECT_NAME} "source/*.cpp")
 
 target_link_libraries(${PROJECT_NAME} -lboost_log_setup ${USED_LIBS} )
 
 if(ON)
     enable_testing()
     find_package(GTest REQUIRED)
-    add_library(${PROJECT_NAME}_lib source/main.cpp source/Client.cpp source/Server.cpp)
+    add_library(${PROJECT_NAME}_lib ${SRC})
     include_directories("tests")
     target_link_libraries(${PROJECT_NAME}_lib -lboost_log_setup ${USED_LIBS})
     add_executable(${PROJECT_NAME}_tests tests/main.cpp)
