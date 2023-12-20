@@ -28,19 +28,16 @@ int main(int argc, char *argv[]) {
         if(std::string(argv[i])=="-p"){
             i++;
             port = atoi(argv[i]);
-            continue;
-        }
-        if(std::string(argv[i])=="-l"){
+        }else if(std::string(argv[i])=="-l"){
             i++;
             logs = atoi(argv[i]);
-            continue;
         }
     }
 
 
     switch (logs) {
         case 0:
-            init_deep_debug_log;
+            init_deep_debug_log();
             break;
         case 1:
             init_debug_log();
@@ -63,7 +60,7 @@ int main(int argc, char *argv[]) {
     /**
      * В этом потоке добавляются новые клиенты
      */
-    threads.create_thread(boost::bind( Server::accept_thread, port));
+    threads.create_thread([port] { return Server::accept_thread(port); });
 
     /**
      * В этом потоке обрабатывается список клиентов
