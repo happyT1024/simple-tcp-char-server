@@ -10,16 +10,6 @@
 
 
 class Client {
-private:
-    boost::asio::ip::tcp::socket m_sock;
-    ClientCfg m_clientCfg;
-    bool m_user_exit; // True если вызвали stop(), при этом пользователь еще не удален из списка пользователей
-    unsigned long long m_id; // используется только для отладки
-    std::size_t m_already_read;
-    std::unique_ptr<char*> m_buff;
-    std::string m_username;
-    boost::posix_time::ptime m_last_ping; // время последнего запроса от пользователя
-    std::queue<std::pair<std::string, std::string>> & m_messages; // всегда ссылается на m_messages в Server
 public:
     /**
      * Конструктор
@@ -103,6 +93,17 @@ private:
      * @param msg - сообщение от пользователя
      */
     void new_message(std::string & msg);
+
+private:
+    boost::asio::ip::tcp::socket m_sock;
+    ClientCfg m_clientCfg;
+    bool m_user_exit; // True если вызвали stop(), при этом пользователь еще не удален из списка пользователей
+    unsigned long long m_id; // используется только для отладки
+    std::size_t m_already_read;
+    std::unique_ptr<char*> m_buff;
+    std::string m_username;
+    boost::posix_time::ptime m_last_ping; // время последнего запроса от пользователя
+    std::queue<std::pair<std::string, std::string>> & m_messages; // всегда ссылается на m_messages в Server
 
 private:
     FRIEND_TEST(Client, getUsername);
