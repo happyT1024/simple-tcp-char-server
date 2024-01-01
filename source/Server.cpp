@@ -1,8 +1,5 @@
-//
-// Created by matvey on 09.04.23.
-//
-
-#include "Server.h"
+#include <Server.h>
+#include <boost/log/trivial.hpp>
 
 unsigned long long Server::last_id_ = first_id_;
 std::queue<std::pair<std::string, std::string>> Server::messages_ = std::queue<std::pair<std::string, std::string>>();
@@ -21,7 +18,7 @@ void Server::accept_thread(int port) {
                                                 boost::asio::ip::tcp::endpoint(
                                                         boost::asio::ip::tcp::v4(), port));
         while (true) {
-            std::shared_ptr<Client> client(new Client(messages_, service_, last_id_));
+            auto client = std::make_shared<Client>(Client(messages_, service_, last_id_));
             last_id_++;
 
             acceptor.accept(client->sock());
@@ -42,7 +39,7 @@ void Server::accept_thread(int port) {
 
             boost::this_thread::sleep(boost::posix_time::millisec(1));
         }
-    }catch(std::exception e){
+    }catch(const std::exception & e){
         BOOST_LOG_TRIVIAL(fatal)<<"FATAL ERROR accept_thread: " << e.what();
         exit(1);
     }
@@ -96,7 +93,7 @@ void Server::handle_clients_thread() {
             mtx.unlock();
             BOOST_LOG_TRIVIAL(trace) << "mtx unlock tread handle_clients_thread";
         }
-    }catch(std::exception e){
+    }catch(const std::exception & e){
         BOOST_LOG_TRIVIAL(fatal)<<"FATAL ERROR handle_clients_thread: " << e.what();
         exit(2);
     }

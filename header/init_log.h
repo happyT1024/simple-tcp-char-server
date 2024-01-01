@@ -1,18 +1,10 @@
-//
-// Created by matvey on 16.04.23.
-//
+#pragma once
 
-#ifndef SIMPLETCPCHAT_INIT_LOG_H
-#define SIMPLETCPCHAT_INIT_LOG_H
-
-#include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/sinks/text_file_backend.hpp>
 #include <boost/log/utility/setup/file.hpp>
-#include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/sources/severity_logger.hpp>
-#include <boost/log/sources/record_ostream.hpp>
 
 namespace logging = boost::log;
 namespace src = boost::log::sources;
@@ -53,6 +45,3 @@ void init_deep_debug_log()
                     logging::trivial::severity >= logging::trivial::trace
             );
 }
-
-
-#endif //SIMPLETCPCHAT_INIT_LOG_H

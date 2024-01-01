@@ -3,7 +3,6 @@ project(SimpleTCPChat)
 
 set(CMAKE_CXX_STANDARD 20)
 set(TESTS OFF)
-set(SRC source/main.cpp)
 
 SET(Boost_USE_STATIC_LIBS OFF)
 SET(Boost_USE_MULTITHREAD ON)
