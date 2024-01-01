@@ -1,8 +1,5 @@
-//
-// Created by matvey on 05.04.23.
-//
-
-#include "Client.h"
+#include <Client.h>
+#include <boost/log/trivial.hpp>
 
 void Client::update_ping() {
     last_ping = boost::posix_time::microsec_clock::local_time();

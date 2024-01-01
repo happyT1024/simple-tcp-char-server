@@ -1,8 +1,5 @@
-//
-// Created by matvey on 09.04.23.
-//
-
-#include "Server.h"
+#include <Server.h>
+#include <boost/log/trivial.hpp>
 
 unsigned long long Server::last_id_ = first_id_;
 std::queue<std::pair<std::string, std::string>> Server::messages_ = std::queue<std::pair<std::string, std::string>>();

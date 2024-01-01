@@ -1,15 +1,8 @@
-//
-// Created by matvey on 05.04.23.
-//
-
-#ifndef TCPCHATSERVER_CLIENT_H
-#define TCPCHATSERVER_CLIENT_H
+#pragma once
 
 #include <boost/asio.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/log/trivial.hpp>
+
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 #include <queue>
 
@@ -114,5 +107,3 @@ private:
      */
     void new_message(std::string & msg);
 };
-
-#endif //TCPCHATSERVER_CLIENT_H

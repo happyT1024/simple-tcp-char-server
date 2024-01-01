@@ -1,7 +1,8 @@
 #include <boost/thread.hpp>
-#include "Server.h"
-#include "../header/init_log.h"
-#include "signalHandler.h"
+#include <Server.h>
+#include <init_log.h>
+#include <signalHandler.h>
+#include <boost/log/utility/setup/common_attributes.hpp>
 
 /**
  * Параметры запуска программы
