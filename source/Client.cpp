@@ -1,12 +1,30 @@
 #include <Client.h>
 #include <boost/log/trivial.hpp>
 
+void swap(Client & lhs, Client & rhs) noexcept {
+    std::swap(lhs.m_sock, rhs.m_sock);
+    std::swap(lhs.m_clientCfg, rhs.m_clientCfg);
+    std::swap(lhs.m_user_exit, rhs.m_user_exit);
+    std::swap(lhs.m_id, rhs.m_id);
+    std::swap(lhs.m_already_read, rhs.m_already_read);
+    std::swap(lhs.m_buff, rhs.m_buff);
+    std::swap(lhs.m_username, rhs.m_username);
+    std::swap(lhs.m_last_ping, rhs.m_last_ping);
+    std::swap(lhs.m_messages, rhs.m_messages);
+}
+
+Client& Client::operator=(Client other) {
+    if(this != &other)
+        swap(*this, other);
+    return *this;
+}
+
 void Client::update_ping() {
     m_last_ping = boost::posix_time::microsec_clock::local_time();
 }
 
 boost::asio::ip::tcp::socket &Client::sock() {
-    return m_sock;
+    return *m_sock;
 }
 
 unsigned long long Client::get_id() const {
@@ -36,7 +54,7 @@ bool Client::get_user_exit() const {
 
 void Client::write(std::string &msg) {
     try {
-        m_sock.write_some(boost::asio::buffer(msg));
+        m_sock->write_some(boost::asio::buffer(msg));
     }catch(boost::wrapexcept<boost::system::system_error> & e){
         /**
          * может случиться когда пользователь закрыл соединение, но его еще не удалили, стандартная ситуация
@@ -55,15 +73,15 @@ bool Client::timed_out() const {
 void Client::stop() {
     BOOST_LOG_TRIVIAL(info)<<"Close connection with User id:"<<m_id;
     boost::system::error_code err;
-    if(m_sock.close(err) || err) {
+    if(m_sock->close(err) || err) {
         BOOST_LOG_TRIVIAL(error)<<"Close connection fail. Error:"<<err.message();
     }
     m_user_exit = true;
 }
 
 void Client::read_request() {
-    if (m_sock.available())
-        m_already_read += m_sock.read_some(
+    if (m_sock->available())
+        m_already_read += m_sock->read_some(
                 boost::asio::buffer(*m_buff + m_already_read, m_clientCfg.get_m_max_msg() - m_already_read));
 }
 

@@ -18,7 +18,7 @@ void Server::accept_thread(int port) {
                                                 boost::asio::ip::tcp::endpoint(
                                                         boost::asio::ip::tcp::v4(), port));
         while (true) {
-            auto client = std::make_shared<Client>(Client(m_messages, m_service, m_last_id));
+            auto client = std::make_shared<Client>(m_messages, m_service, m_last_id);
             m_last_id++;
 
             acceptor.accept(client->sock());

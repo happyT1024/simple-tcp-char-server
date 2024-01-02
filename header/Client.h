@@ -8,7 +8,6 @@
 
 #include <ClientCfg.h>
 
-
 class Client {
 public:
     /**
@@ -19,15 +18,19 @@ public:
      */
     Client(std::queue<std::pair<std::string, std::string>> & messages, boost::asio::io_service & service,
            unsigned long long & id, ClientCfg clientCfg = ClientCfg{})
-            : m_sock(service)
-            , m_messages(messages)
+            : m_messages(messages)
             , m_id(id)
             , m_already_read(0)
             , m_user_exit(false)
             , m_clientCfg(clientCfg)
     {
-         m_buff = std::make_unique<char*>(new char[clientCfg.get_m_max_msg()]);
+        m_sock = std::make_unique<boost::asio::ip::tcp::socket>(boost::asio::ip::tcp::socket(service));
+        m_buff = std::make_unique<char*>(new char[m_clientCfg.get_m_max_msg()]);
     }
+
+    Client& operator=(Client other);
+
+    friend void swap(Client & lhs, Client & rhs) noexcept;
 
     /**
      * Обновляет last_ping
@@ -43,7 +46,7 @@ public:
      */
     void answer_to_client();
 
-    bool get_user_exit() const;
+    [[nodiscard]] bool get_user_exit() const;
 
     std::string get_username();
 
@@ -95,7 +98,7 @@ private:
     void new_message(std::string & msg);
 
 private:
-    boost::asio::ip::tcp::socket m_sock;
+    std::unique_ptr<boost::asio::ip::tcp::socket> m_sock;
     ClientCfg m_clientCfg;
     bool m_user_exit; // True если вызвали stop(), при этом пользователь еще не удален из списка пользователей
     unsigned long long m_id; // используется только для отладки
