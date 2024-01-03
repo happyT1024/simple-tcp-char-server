@@ -4,5 +4,5 @@
 
 void signalHandler(int signum) {
     BOOST_LOG_TRIVIAL(info) << "Interrupt signal (" << signum << ") received";
-    exit(signum);
+    std::exit(signum);
 }
