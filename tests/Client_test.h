@@ -7,12 +7,16 @@
 
 class Client_Test : public testing::Test {
 protected:
+	Client_Test()
+	: service(boost::asio::io_service{})
+	, client(Client(messages, service, id))
+	{}
+
 	void SetUp() override {
-		client = Client(messages, service, id);
 		name = "TEST_NAME";
 	}
 
-	// void TearDown() override {}
+	void TearDown() override {}
 
 	boost::asio::io_service service;
 	std::queue<std::pair<std::string, std::string>> messages;
