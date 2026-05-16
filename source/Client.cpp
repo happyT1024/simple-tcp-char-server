@@ -88,12 +88,22 @@ void Client::stop() {
 
 void Client::read_request() {
     if (!m_ssl) return;
-    if (m_sock->available()) {
-        int ret = SSL_read(m_ssl, *m_buff + m_already_read,
-                           static_cast<int>(m_clientCfg.get_m_max_msg() - m_already_read));
-        if (ret > 0)
-            m_already_read += static_cast<std::size_t>(ret);
+    int ret = SSL_read(m_ssl, *m_buff + m_already_read,
+                       static_cast<int>(m_clientCfg.get_m_max_msg() - m_already_read));
+    if (ret > 0) {
+        m_already_read += static_cast<std::size_t>(ret);
+        return;
     }
+    int err = SSL_get_error(m_ssl, ret);
+    if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
+        return;
+    }
+    if (err == SSL_ERROR_SYSCALL) {
+        BOOST_LOG_TRIVIAL(debug) << "User id:" << m_id << " SSL_ERROR_SYSCALL errno=" << errno;
+        return;
+    }
+    BOOST_LOG_TRIVIAL(error) << "User id:" << m_id << " SSL error: " << err;
+    stop();
 }
 
 void Client::init_username(std::string &username) {
@@ -122,7 +132,9 @@ void Client::process_request() {
 
     update_ping();
     size_t pos = std::find(*m_buff, *m_buff + m_already_read, '\n') - *m_buff;
-    std::string msg(*m_buff, pos - 1);
+    std::string msg(*m_buff, pos);
+    if (!msg.empty() && msg.back() == '\r')
+        msg.pop_back();
     std::copy(*m_buff + m_already_read, *m_buff + m_clientCfg.get_m_max_msg(), *m_buff);
     m_already_read -= pos + 1;
 
