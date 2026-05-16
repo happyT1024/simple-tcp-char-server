@@ -44,7 +44,9 @@ void Server::accept_thread(int port) {
         init_ssl_ctx();
 
         BOOST_LOG_TRIVIAL(debug) << "Thread accept_thread enable";
-        std::string greetings = "Welcome to Simple TCP Chat\n"
+        std::string greetings = "==================================\n"
+                                " Welcome to Simple TCP Chat (TLS)\n"
+                                "==================================\n"
                                 "What is your name : ";
 
         boost::asio::ip::tcp::acceptor acceptor(m_service,

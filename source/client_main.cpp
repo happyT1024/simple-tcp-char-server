@@ -3,17 +3,55 @@
 #include <thread>
 #include <atomic>
 #include <csignal>
+#include <cstring>
 
 #include <boost/asio.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+#define ANSI_RESET   "\033[0m"
+#define ANSI_GREEN   "\033[32m"
+#define ANSI_CYAN    "\033[36m"
+#define ANSI_YELLOW  "\033[33m"
+#define ANSI_GRAY    "\033[90m"
+#define ANSI_BOLD    "\033[1m"
 
 static std::atomic<bool> g_running{true};
 
 void signal_handler(int) {
     g_running = false;
+}
+
+static void print_banner() {
+    std::cout << ANSI_CYAN ANSI_BOLD
+              << "╔══════════════════════════════════╗\n"
+              << "║     Simple TCP Chat  v0.2        ║\n"
+              << "║     TLS 1.3  encrypted           ║\n"
+              << "╚══════════════════════════════════╝"
+              << ANSI_RESET "\n\n";
+}
+
+static void print_colored(const std::string &line) {
+    if (line.empty()) {
+        std::cout << '\n';
+        return;
+    }
+
+    auto sep = line.find(": ");
+    if (sep == std::string::npos) {
+        std::cout << line;
+        return;
+    }
+
+    std::string name = line.substr(0, sep);
+    std::string msg  = line.substr(sep + 2);
+
+    if (name == "Server") {
+        std::cout << ANSI_CYAN << name << ANSI_RESET ": " << msg;
+    } else {
+        std::cout << ANSI_GREEN << name << ANSI_RESET ": " << msg;
+    }
 }
 
 void read_thread(SSL *ssl) {
@@ -24,7 +62,18 @@ void read_thread(SSL *ssl) {
             g_running = false;
             break;
         }
-        std::cout.write(buf.data(), ret);
+
+        std::size_t start = 0;
+        for (std::size_t i = 0; i < static_cast<std::size_t>(ret); ++i) {
+            if (buf[i] == '\n') {
+                print_colored(buf.substr(start, i - start));
+                std::cout << '\n';
+                start = i + 1;
+            }
+        }
+        if (start < static_cast<std::size_t>(ret)) {
+            print_colored(buf.substr(start, ret - start));
+        }
         std::cout.flush();
     }
 }
@@ -74,12 +123,15 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        print_banner();
+
         std::thread reader(read_thread, ssl);
 
         std::string input;
         while (g_running && std::getline(std::cin, input)) {
             input += '\n';
             SSL_write(ssl, input.data(), static_cast<int>(input.size()));
+            std::cout << ANSI_YELLOW "> " ANSI_RESET;
         }
 
         g_running = false;
