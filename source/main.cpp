@@ -1,4 +1,6 @@
-#include <boost/thread.hpp>
+#include <thread>
+#include <vector>
+
 #include <Server.h>
 #include <init_log.h>
 #include <signalHandler.h>
@@ -20,7 +22,7 @@
  */
 
 int main(int argc, char *argv[]) {
-    signal(SIGTERM, signalHandler); // обработка стандартного завершения работы программы
+    signal(SIGTERM, signalHandler);
     signal(SIGINT, signalHandler);
 
     int port = 8001;
@@ -34,7 +36,6 @@ int main(int argc, char *argv[]) {
             logs = atoi(argv[i]);
         }
     }
-
 
     switch (logs) {
         case 0:
@@ -55,20 +56,13 @@ int main(int argc, char *argv[]) {
 
     BOOST_LOG_TRIVIAL(info)<<"Server started at port: "<<port<<" logs type: "<<logs;
 
+    std::vector<std::thread> threads;
+    threads.emplace_back([port] { Server::accept_thread(port); });
+    threads.emplace_back(Server::handle_clients_thread);
 
-    boost::thread_group threads;
-
-    /**
-     * В этом потоке добавляются новые клиенты
-     */
-    threads.create_thread([port] { return Server::accept_thread(port); });
-
-    /**
-     * В этом потоке обрабатывается список клиентов
-     */
-    threads.create_thread(Server::handle_clients_thread);
-
-    threads.join_all();
+    for (auto & t : threads) {
+        t.join();
+    }
 
     return 0;
 }

@@ -4,21 +4,23 @@
 #include <boost/asio.hpp>
 #include <boost/log/sinks/text_file_backend.hpp>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 #include <queue>
 
 #include <Client.h>
 
+/**
+ * Статический класс-диспетчер TCP/TLS-сервера.
+ *
+ * accept_thread      — бесконечный цикл: accept → SSL handshake → регистрация
+ * handle_clients_thread — бесконечный цикл: обработка → удаление → broadcast
+ */
 class Server {
 public:
-    /**
-     * Поток поключения и добавления новых клиентов в clientsList_
-     * @param port - порт программы, по умолчанию 8001
-     */
     [[noreturn]] static void accept_thread(int port = 8001);
 
-    /**
-     * Поток обработки clientsList_, в том числе и удаления
-     */
     [[noreturn]] static void handle_clients_thread();
 private:
     enum{
@@ -28,9 +30,19 @@ private:
     Server();
     Server(const Server &);
     Server& operator=(Server &);
+    static void init_ssl_ctx();
+    static boost::asio::ip::tcp::acceptor create_acceptor(int port);
+    static std::shared_ptr<Client> accept_connection(boost::asio::ip::tcp::acceptor & acceptor);
+    static bool perform_ssl_handshake(const std::shared_ptr<Client> & client);
+    static void send_greetings(const std::shared_ptr<Client> & client);
+    static void register_client(const std::shared_ptr<Client> & client);
+    static void process_all_clients();
+    static void remove_disconnected_clients();
+    static void broadcast_messages();
     static unsigned long long m_last_id;
+    static SSL_CTX *m_ssl_ctx;
     static boost::asio::io_service m_service;
-    static std::queue<std::pair<std::string, std::string>> m_messages; // Очередь с новыми сообщениями (ее изменяет только handle_clients_thread)
-    static std::list<std::shared_ptr<Client>>m_clientsList; // Список клиентов (общие данные обоих потоков)
-    static std::mutex m_mtx; // mutex для clientsList_
+    static std::queue<std::pair<std::string, std::string>> m_messages;
+    static std::list<std::shared_ptr<Client>>m_clientsList;
+    static std::mutex m_mtx;
 };
