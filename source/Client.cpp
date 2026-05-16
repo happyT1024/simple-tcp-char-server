@@ -1,8 +1,11 @@
 #include <Client.h>
 #include <boost/log/trivial.hpp>
 
+#include <sys/select.h>
+
 void swap(Client & lhs, Client & rhs) noexcept {
     std::swap(lhs.m_sock, rhs.m_sock);
+    std::swap(lhs.m_ssl, rhs.m_ssl);
     std::swap(lhs.m_clientCfg, rhs.m_clientCfg);
     std::swap(lhs.m_user_exit, rhs.m_user_exit);
     std::swap(lhs.m_id, rhs.m_id);
@@ -19,12 +22,21 @@ Client& Client::operator=(Client other) {
     return *this;
 }
 
+Client::~Client() {
+    if (m_ssl) SSL_free(m_ssl);
+}
+
 void Client::update_ping() {
     m_last_ping = boost::posix_time::microsec_clock::local_time();
 }
 
 boost::asio::ip::tcp::socket &Client::sock() {
     return *m_sock;
+}
+
+void Client::set_ssl(SSL *ssl) {
+    if (m_ssl) SSL_free(m_ssl);
+    m_ssl = ssl;
 }
 
 unsigned long long Client::get_id() const {
@@ -36,9 +48,6 @@ void Client::answer_to_client() {
         read_request();
         process_request();
     } catch (boost::system::system_error &) {
-        /**
-         * это исключение никогда не вылезало
-         */
         BOOST_LOG_TRIVIAL(error)<<"User id:"<<m_id<<" answer_to_client -> system_error";
         stop();
     }
@@ -53,14 +62,30 @@ bool Client::get_user_exit() const {
 }
 
 void Client::write(std::string &msg) {
-    try {
-        m_sock->write_some(boost::asio::buffer(msg));
-    }catch(boost::wrapexcept<boost::system::system_error> & e){
-        /**
-         * может случиться когда пользователь закрыл соединение, но его еще не удалили, стандартная ситуация
-         */
-        BOOST_LOG_TRIVIAL(info)<<"User id:"<<m_id<<" close connect, msg not send";
+    if (!m_ssl) return;
+
+    int fd = m_sock->native_handle();
+
+    for (int attempt = 0; attempt < 5; ++attempt) {
+        int ret = SSL_write(m_ssl, msg.data(), static_cast<int>(msg.size()));
+        if (ret > 0) {
+            return;
+        }
+        int err = SSL_get_error(m_ssl, ret);
+        if (err == SSL_ERROR_WANT_WRITE) {
+            fd_set write_fds;
+            FD_ZERO(&write_fds);
+            FD_SET(fd, &write_fds);
+            struct timeval tv = {0, 1000};
+            select(fd + 1, NULL, &write_fds, NULL, &tv);
+            continue;
+        }
+        if (err == SSL_ERROR_WANT_READ) {
+            return;
+        }
+        BOOST_LOG_TRIVIAL(info)<<"User id:"<<m_id<<" close connect, msg not send, err="<<err;
         stop();
+        return;
     }
 }
 
@@ -72,6 +97,9 @@ bool Client::timed_out() const {
 
 void Client::stop() {
     BOOST_LOG_TRIVIAL(info)<<"Close connection with User id:"<<m_id;
+    if (m_ssl) {
+        SSL_shutdown(m_ssl);
+    }
     boost::system::error_code err;
     if(m_sock->close(err) || err) {
         BOOST_LOG_TRIVIAL(error)<<"Close connection fail. Error:"<<err.message();
@@ -80,9 +108,33 @@ void Client::stop() {
 }
 
 void Client::read_request() {
-    if (m_sock->available())
-        m_already_read += m_sock->read_some(
-                boost::asio::buffer(*m_buff + m_already_read, m_clientCfg.get_m_max_msg() - m_already_read));
+    if (!m_ssl || !m_sock->is_open()) return;
+
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(m_sock->native_handle(), &read_fds);
+    struct timeval tv = {0, 0};
+    int sel = select(m_sock->native_handle() + 1, &read_fds, NULL, NULL, &tv);
+    if (sel <= 0) {
+        return;
+    }
+
+    int ret = SSL_read(m_ssl, *m_buff + m_already_read,
+                       static_cast<int>(m_clientCfg.get_m_max_msg() - m_already_read));
+    if (ret > 0) {
+        m_already_read += static_cast<std::size_t>(ret);
+        return;
+    }
+    int err = SSL_get_error(m_ssl, ret);
+    if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
+        return;
+    }
+    if (err == SSL_ERROR_SYSCALL) {
+        BOOST_LOG_TRIVIAL(debug) << "User id:" << m_id << " SSL_ERROR_SYSCALL errno=" << errno;
+        return;
+    }
+    BOOST_LOG_TRIVIAL(error) << "User id:" << m_id << " SSL error: " << err;
+    stop();
 }
 
 void Client::init_username(std::string &username) {
@@ -111,7 +163,9 @@ void Client::process_request() {
 
     update_ping();
     size_t pos = std::find(*m_buff, *m_buff + m_already_read, '\n') - *m_buff;
-    std::string msg(*m_buff, pos - 1);
+    std::string msg(*m_buff, pos);
+    if (!msg.empty() && msg.back() == '\r')
+        msg.pop_back();
     std::copy(*m_buff + m_already_read, *m_buff + m_clientCfg.get_m_max_msg(), *m_buff);
     m_already_read -= pos + 1;
 
