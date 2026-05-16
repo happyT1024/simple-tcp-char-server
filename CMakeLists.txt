@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(SimpleTCPChat)
+project(SimpleTCPChat VERSION 0.2.1)
 
 set(CMAKE_CXX_STANDARD 20)
 set(TESTS ON)
