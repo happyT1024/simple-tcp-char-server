@@ -78,47 +78,81 @@ void read_thread(SSL *ssl) {
     }
 }
 
-int main(int argc, char *argv[]) {
+struct ClientConfig {
     std::string host = "127.0.0.1";
     int port = 8001;
+};
 
+static ClientConfig parse_args(int argc, char *argv[]) {
+    ClientConfig cfg;
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "-h" && i + 1 < argc) {
-            host = argv[++i];
+            cfg.host = argv[++i];
         } else if (arg == "-p" && i + 1 < argc) {
-            port = std::atoi(argv[++i]);
+            cfg.port = std::atoi(argv[++i]);
         }
     }
+    return cfg;
+}
 
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-
+static SSL_CTX* init_openssl_client() {
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
 
     SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());
     if (!ctx) {
         std::cerr << "Unable to create SSL context" << std::endl;
-        return 1;
+        return nullptr;
     }
-
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+    return ctx;
+}
+
+static boost::asio::ip::tcp::socket connect_to_server(boost::asio::io_service & service,
+                                                       const std::string & host, int port) {
+    boost::asio::ip::tcp::resolver resolver(service);
+    boost::asio::ip::tcp::socket sock(service);
+    boost::asio::connect(sock, resolver.resolve(host, std::to_string(port)));
+    return sock;
+}
+
+static SSL* do_ssl_connect(SSL_CTX *ctx, boost::asio::ip::tcp::socket & sock) {
+    SSL *ssl = SSL_new(ctx);
+    SSL_set_fd(ssl, sock.native_handle());
+    if (SSL_connect(ssl) <= 0) {
+        std::cerr << "SSL handshake failed" << std::endl;
+        ERR_print_errors_fp(stderr);
+        SSL_free(ssl);
+        return nullptr;
+    }
+    return ssl;
+}
+
+static void run_input_loop(SSL *ssl) {
+    std::string input;
+    while (g_running && std::getline(std::cin, input)) {
+        input += '\n';
+        SSL_write(ssl, input.data(), static_cast<int>(input.size()));
+        std::cout << ANSI_YELLOW "> " ANSI_RESET;
+    }
+}
+
+int main(int argc, char *argv[]) {
+    ClientConfig cfg = parse_args(argc, argv);
+
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+
+    SSL_CTX *ctx = init_openssl_client();
+    if (!ctx) return 1;
 
     try {
         boost::asio::io_service service;
-        boost::asio::ip::tcp::resolver resolver(service);
-        boost::asio::ip::tcp::socket sock(service);
+        boost::asio::ip::tcp::socket sock = connect_to_server(service, cfg.host, cfg.port);
 
-        boost::asio::connect(sock, resolver.resolve(host, std::to_string(port)));
-
-        SSL *ssl = SSL_new(ctx);
-        SSL_set_fd(ssl, sock.native_handle());
-
-        if (SSL_connect(ssl) <= 0) {
-            std::cerr << "SSL handshake failed" << std::endl;
-            ERR_print_errors_fp(stderr);
-            SSL_free(ssl);
+        SSL *ssl = do_ssl_connect(ctx, sock);
+        if (!ssl) {
             SSL_CTX_free(ctx);
             return 1;
         }
@@ -126,13 +160,7 @@ int main(int argc, char *argv[]) {
         print_banner();
 
         std::thread reader(read_thread, ssl);
-
-        std::string input;
-        while (g_running && std::getline(std::cin, input)) {
-            input += '\n';
-            SSL_write(ssl, input.data(), static_cast<int>(input.size()));
-            std::cout << ANSI_YELLOW "> " ANSI_RESET;
-        }
+        run_input_loop(ssl);
 
         g_running = false;
         reader.join();

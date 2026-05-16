@@ -56,9 +56,17 @@ private:
 
     void stop();
 
+    bool wait_for_read_ready(int fd);
+
+    bool handle_ssl_read_error(int ret);
+
     void read_request();
 
+    std::string extract_line_from_buffer();
+
     void process_request();
+
+    bool wait_for_write_ready(int fd);
 
     void new_message(std::string & msg);
 

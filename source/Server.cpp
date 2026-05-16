@@ -39,57 +39,105 @@ void Server::init_ssl_ctx() {
     }
 }
 
+boost::asio::ip::tcp::acceptor Server::create_acceptor(int port) {
+    return boost::asio::ip::tcp::acceptor(m_service,
+                                          boost::asio::ip::tcp::endpoint(
+                                                  boost::asio::ip::tcp::v4(), port));
+}
+
+std::shared_ptr<Client> Server::accept_connection(boost::asio::ip::tcp::acceptor & acceptor) {
+    auto client = std::make_shared<Client>(m_messages, m_service, m_last_id, m_ssl_ctx);
+    m_last_id++;
+    acceptor.accept(client->sock());
+    client->update_ping();
+    return client;
+}
+
+bool Server::perform_ssl_handshake(const std::shared_ptr<Client> & client) {
+    SSL *ssl = SSL_new(m_ssl_ctx);
+    SSL_set_fd(ssl, client->sock().native_handle());
+    if (SSL_accept(ssl) <= 0) {
+        BOOST_LOG_TRIVIAL(error) << "SSL handshake failed for User id:" << client->get_id();
+        ERR_print_errors_fp(stderr);
+        SSL_free(ssl);
+        return false;
+    }
+    client->sock().non_blocking(true);
+    client->set_ssl(ssl);
+    return true;
+}
+
+void Server::send_greetings(const std::shared_ptr<Client> & client) {
+    std::string greetings = "==================================\n"
+                            " Welcome to Simple TCP Chat (TLS)\n"
+                            "==================================\n"
+                            "What is your name : \n";
+    client->write(greetings);
+    BOOST_LOG_TRIVIAL(trace) << "greetings send";
+}
+
+void Server::register_client(const std::shared_ptr<Client> & client) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+    BOOST_LOG_TRIVIAL(trace) << "m_mtx lock tread accept_thread";
+
+    m_clientsList.push_back(client);
+    BOOST_LOG_TRIVIAL(debug) << "USER id:" << client->get_id() << " add to ClientsList";
+    BOOST_LOG_TRIVIAL(debug) << "ClientsList size = " << m_clientsList.size();
+
+    BOOST_LOG_TRIVIAL(trace) << "m_mtx unlock tread accept_thread";
+}
+
 void Server::accept_thread(int port) {
     try {
         init_ssl_ctx();
-
         BOOST_LOG_TRIVIAL(debug) << "Thread accept_thread enable";
-        std::string greetings = "==================================\n"
-                                " Welcome to Simple TCP Chat (TLS)\n"
-                                "==================================\n"
-                                "What is your name : \n";
 
-        boost::asio::ip::tcp::acceptor acceptor(m_service,
-                                                boost::asio::ip::tcp::endpoint(
-                                                        boost::asio::ip::tcp::v4(), port));
+        auto acceptor = create_acceptor(port);
         while (true) {
-            auto client = std::make_shared<Client>(m_messages, m_service, m_last_id, m_ssl_ctx);
-            m_last_id++;
-
-            acceptor.accept(client->sock());
-            client->update_ping();
-
-            SSL *ssl = SSL_new(m_ssl_ctx);
-            SSL_set_fd(ssl, client->sock().native_handle());
-            if (SSL_accept(ssl) <= 0) {
-                BOOST_LOG_TRIVIAL(error) << "SSL handshake failed for User id:" << client->get_id();
-                ERR_print_errors_fp(stderr);
-                SSL_free(ssl);
-                continue;
-            }
-            client->sock().non_blocking(true);
-            client->set_ssl(ssl);
+            auto client = accept_connection(acceptor);
+            if (!perform_ssl_handshake(client)) continue;
 
             BOOST_LOG_TRIVIAL(info) << "USER id:" << client->get_id() << " connect to server";
-            client->write(greetings);
-            BOOST_LOG_TRIVIAL(trace) << "greetings send";
-
-            {
-                std::lock_guard<std::mutex> lock(m_mtx);
-                BOOST_LOG_TRIVIAL(trace) << "m_mtx lock tread accept_thread";
-
-                m_clientsList.push_back(client);
-                BOOST_LOG_TRIVIAL(debug) << "USER id:" << client->get_id() << " add to ClientsList";
-                BOOST_LOG_TRIVIAL(debug) << "ClientsList size = " << m_clientsList.size();
-
-                BOOST_LOG_TRIVIAL(trace) << "m_mtx unlock tread accept_thread";
-            }
+            send_greetings(client);
+            register_client(client);
 
             boost::this_thread::sleep(boost::posix_time::millisec(1));
         }
     }catch(const std::exception & e){
         BOOST_LOG_TRIVIAL(fatal)<<"FATAL ERROR accept_thread: " << e.what();
         exit(1);
+    }
+}
+
+void Server::process_all_clients() {
+    for (const auto &x: m_clientsList) {
+        x->answer_to_client();
+    }
+}
+
+void Server::remove_disconnected_clients() {
+    m_clientsList.erase(
+            std::remove_if(
+                    m_clientsList.begin(),
+                    m_clientsList.end(),
+                    [&](const std::shared_ptr<Client> &c) -> bool {
+                        if (c->get_user_exit()) {
+                            BOOST_LOG_TRIVIAL(info) << "USER id:" << c->get_id() << " delete";
+                            m_messages.emplace("Server", c->get_username() + " leave the chat");
+                        };
+                        return c->get_user_exit();
+                    }),
+            m_clientsList.end());
+}
+
+void Server::broadcast_messages() {
+    while (!m_messages.empty()) {
+        std::string msg = m_messages.front().first + ": " + m_messages.front().second;
+        for (const auto &x: m_clientsList) {
+            if (x->user_is_ok())
+                x->write(msg);
+        }
+        m_messages.pop();
     }
 }
 
@@ -111,31 +159,9 @@ void Server::handle_clients_thread() {
                     continue;
                 }
 
-                for (const auto &x: m_clientsList) {
-                    x->answer_to_client();
-                }
-
-                m_clientsList.erase(
-                        std::remove_if(
-                                m_clientsList.begin(),
-                                m_clientsList.end(),
-                                [&](const std::shared_ptr<Client> &Client) -> bool {
-                                    if (Client->get_user_exit()) {
-                                        BOOST_LOG_TRIVIAL(info) << "USER id:" << Client->get_id() << " delete";
-                                        m_messages.emplace("Server", Client->get_username() + " leave the chat");
-                                    };
-                                    return Client->get_user_exit();
-                                }),
-                        m_clientsList.end());
-
-                while (!m_messages.empty()) {
-                    std::string msg = m_messages.front().first + ": " + m_messages.front().second;
-                    for (const auto &x: m_clientsList) {
-                        if (x->user_is_ok())
-                            x->write(msg);
-                    }
-                    m_messages.pop();
-                }
+                process_all_clients();
+                remove_disconnected_clients();
+                broadcast_messages();
 
                 BOOST_LOG_TRIVIAL(trace) << "m_mtx unlock tread handle_clients_thread";
             }

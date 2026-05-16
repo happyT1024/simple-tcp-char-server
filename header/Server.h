@@ -25,6 +25,14 @@ private:
     Server(const Server &);
     Server& operator=(Server &);
     static void init_ssl_ctx();
+    static boost::asio::ip::tcp::acceptor create_acceptor(int port);
+    static std::shared_ptr<Client> accept_connection(boost::asio::ip::tcp::acceptor & acceptor);
+    static bool perform_ssl_handshake(const std::shared_ptr<Client> & client);
+    static void send_greetings(const std::shared_ptr<Client> & client);
+    static void register_client(const std::shared_ptr<Client> & client);
+    static void process_all_clients();
+    static void remove_disconnected_clients();
+    static void broadcast_messages();
     static unsigned long long m_last_id;
     static SSL_CTX *m_ssl_ctx;
     static boost::asio::io_service m_service;

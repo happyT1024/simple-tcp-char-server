@@ -61,6 +61,14 @@ bool Client::get_user_exit() const {
     return m_user_exit;
 }
 
+bool Client::wait_for_write_ready(int fd) {
+    fd_set write_fds;
+    FD_ZERO(&write_fds);
+    FD_SET(fd, &write_fds);
+    struct timeval tv = {0, 1000};
+    return select(fd + 1, NULL, &write_fds, NULL, &tv) > 0;
+}
+
 void Client::write(std::string &msg) {
     if (!m_ssl) return;
 
@@ -73,11 +81,7 @@ void Client::write(std::string &msg) {
         }
         int err = SSL_get_error(m_ssl, ret);
         if (err == SSL_ERROR_WANT_WRITE) {
-            fd_set write_fds;
-            FD_ZERO(&write_fds);
-            FD_SET(fd, &write_fds);
-            struct timeval tv = {0, 1000};
-            select(fd + 1, NULL, &write_fds, NULL, &tv);
+            wait_for_write_ready(fd);
             continue;
         }
         if (err == SSL_ERROR_WANT_READ) {
@@ -109,34 +113,44 @@ void Client::stop() {
     m_user_exit = true;
 }
 
+bool Client::wait_for_read_ready(int fd) {
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(fd, &read_fds);
+    struct timeval tv = {0, 0};
+    return select(fd + 1, &read_fds, NULL, NULL, &tv) > 0;
+}
+
+bool Client::handle_ssl_read_error(int ret) {
+    int err = SSL_get_error(m_ssl, ret);
+    if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
+        return true;
+    }
+    if (err == SSL_ERROR_SYSCALL) {
+        BOOST_LOG_TRIVIAL(debug) << "User id:" << m_id << " SSL_ERROR_SYSCALL errno=" << errno;
+        return false;
+    }
+    BOOST_LOG_TRIVIAL(error) << "User id:" << m_id << " SSL error: " << err;
+    stop();
+    return false;
+}
+
 void Client::read_request() {
     if (!m_ssl || !m_sock->is_open()) return;
 
-    fd_set read_fds;
-    FD_ZERO(&read_fds);
-    FD_SET(m_sock->native_handle(), &read_fds);
-    struct timeval tv = {0, 0};
-    int sel = select(m_sock->native_handle() + 1, &read_fds, NULL, NULL, &tv);
-    if (sel <= 0) {
-        return;
-    }
+    int fd = m_sock->native_handle();
+    if (!wait_for_read_ready(fd)) return;
 
+    std::size_t max_read = m_clientCfg.get_m_max_msg() - m_already_read;
     int ret = SSL_read(m_ssl, m_buff.data() + m_already_read,
-                       static_cast<int>(m_clientCfg.get_m_max_msg() - m_already_read));
+                       static_cast<int>(max_read));
     if (ret > 0) {
         m_already_read += static_cast<std::size_t>(ret);
         return;
     }
-    int err = SSL_get_error(m_ssl, ret);
-    if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
-        return;
+    if (!handle_ssl_read_error(ret)) {
+        stop();
     }
-    if (err == SSL_ERROR_SYSCALL) {
-        BOOST_LOG_TRIVIAL(debug) << "User id:" << m_id << " SSL_ERROR_SYSCALL errno=" << errno;
-        return;
-    }
-    BOOST_LOG_TRIVIAL(error) << "User id:" << m_id << " SSL error: " << err;
-    stop();
 }
 
 void Client::init_username(std::string &username) {
@@ -157,20 +171,29 @@ void Client::new_message(std::string &msg) {
     m_messages.emplace(m_username, msg);
 }
 
-void Client::process_request() {
+std::string Client::extract_line_from_buffer() {
     char* buf = m_buff.data();
-    bool found_enter = std::find(buf, buf + m_already_read, '\n') < buf + m_already_read;
-    if (!found_enter) {
+    char* end = buf + m_already_read;
+    char* it = std::find(buf, end, '\n');
+    if (it >= end) return {};
+
+    std::string line(buf, static_cast<std::size_t>(it - buf));
+    if (!line.empty() && line.back() == '\r')
+        line.pop_back();
+
+    std::size_t consumed = static_cast<std::size_t>(it - buf + 1);
+    std::copy(it + 1, buf + m_clientCfg.get_m_max_msg(), buf);
+    m_already_read -= consumed;
+    return line;
+}
+
+void Client::process_request() {
+    std::string msg = extract_line_from_buffer();
+    if (msg.empty()) {
         return;
     }
 
     update_ping();
-    size_t pos = std::find(buf, buf + m_already_read, '\n') - buf;
-    std::string msg(buf, pos);
-    if (!msg.empty() && msg.back() == '\r')
-        msg.pop_back();
-    std::copy(buf + m_already_read, buf + m_clientCfg.get_m_max_msg(), buf);
-    m_already_read -= pos + 1;
 
     if (m_username.empty()) {
         BOOST_LOG_TRIVIAL(debug) << "USER id:" << m_id << " send username: " << msg;
