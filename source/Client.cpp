@@ -1,6 +1,8 @@
 #include <Client.h>
 #include <boost/log/trivial.hpp>
 
+#include <sys/select.h>
+
 void swap(Client & lhs, Client & rhs) noexcept {
     std::swap(lhs.m_sock, rhs.m_sock);
     std::swap(lhs.m_ssl, rhs.m_ssl);
@@ -61,10 +63,29 @@ bool Client::get_user_exit() const {
 
 void Client::write(std::string &msg) {
     if (!m_ssl) return;
-    int ret = SSL_write(m_ssl, msg.data(), static_cast<int>(msg.size()));
-    if (ret <= 0) {
-        BOOST_LOG_TRIVIAL(info)<<"User id:"<<m_id<<" close connect, msg not send";
+
+    int fd = m_sock->native_handle();
+
+    for (int attempt = 0; attempt < 5; ++attempt) {
+        int ret = SSL_write(m_ssl, msg.data(), static_cast<int>(msg.size()));
+        if (ret > 0) {
+            return;
+        }
+        int err = SSL_get_error(m_ssl, ret);
+        if (err == SSL_ERROR_WANT_WRITE) {
+            fd_set write_fds;
+            FD_ZERO(&write_fds);
+            FD_SET(fd, &write_fds);
+            struct timeval tv = {0, 1000};
+            select(fd + 1, NULL, &write_fds, NULL, &tv);
+            continue;
+        }
+        if (err == SSL_ERROR_WANT_READ) {
+            return;
+        }
+        BOOST_LOG_TRIVIAL(info)<<"User id:"<<m_id<<" close connect, msg not send, err="<<err;
         stop();
+        return;
     }
 }
 
@@ -87,7 +108,17 @@ void Client::stop() {
 }
 
 void Client::read_request() {
-    if (!m_ssl) return;
+    if (!m_ssl || !m_sock->is_open()) return;
+
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(m_sock->native_handle(), &read_fds);
+    struct timeval tv = {0, 0};
+    int sel = select(m_sock->native_handle() + 1, &read_fds, NULL, NULL, &tv);
+    if (sel <= 0) {
+        return;
+    }
+
     int ret = SSL_read(m_ssl, *m_buff + m_already_read,
                        static_cast<int>(m_clientCfg.get_m_max_msg() - m_already_read));
     if (ret > 0) {

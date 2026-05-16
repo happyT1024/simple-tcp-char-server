@@ -47,7 +47,7 @@ void Server::accept_thread(int port) {
         std::string greetings = "==================================\n"
                                 " Welcome to Simple TCP Chat (TLS)\n"
                                 "==================================\n"
-                                "What is your name : ";
+                                "What is your name : \n";
 
         boost::asio::ip::tcp::acceptor acceptor(m_service,
                                                 boost::asio::ip::tcp::endpoint(
@@ -67,6 +67,7 @@ void Server::accept_thread(int port) {
                 SSL_free(ssl);
                 continue;
             }
+            client->sock().non_blocking(true);
             client->set_ssl(ssl);
 
             BOOST_LOG_TRIVIAL(info) << "USER id:" << client->get_id() << " connect to server";
@@ -132,7 +133,6 @@ void Server::handle_clients_thread() {
                     if (x->user_is_ok())
                         x->write(msg);
                 }
-                BOOST_LOG_TRIVIAL(trace) << "message " << msg << " send";
                 m_messages.pop();
             }
 

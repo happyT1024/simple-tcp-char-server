@@ -16,6 +16,20 @@ cmake -DCMAKE_BUILD_TYPE=Debug -B build && cmake --build build --target SimpleTC
 
 - `TESTS=ON` по умолчанию; создаётся библиотека `SimpleTCPChat_lib` и тестовый экзешник.
 - Юнит-тесты (`tests/Client_test.h`) тестируют `Client` через публичные методы.
+- Функциональные тесты (`tests/functional_test.cpp`) — TLS socketpair.
+- Стресс-тест (`tests/stress_test.py`): 10 TLS-клиентов, проверка joins + msgs.
+
+## Стресс-тест
+
+```bash
+python3 tests/stress_test.py
+```
+
+Требует собранного `SimpleTCPChat` в `build/`. Проверяет:
+- Получение join-сообщений от всех ожидаемых участников
+- Получение broadcast-сообщений от всех других клиентов
+
+Ожидаемый результат: `PASSED: 10/10, FAILED: 0/10`.
 
 ## Запуск
 
