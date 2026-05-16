@@ -11,7 +11,7 @@ namespace src = boost::log::sources;
 namespace sinks = boost::log::sinks;
 namespace keywords = boost::log::keywords;
 
-void init_production_log()
+inline void init_production_log()
 {
     logging::add_file_log
             (
@@ -30,7 +30,7 @@ void init_production_log()
             );
 }
 
-void init_debug_log()
+inline void init_debug_log()
 {
     logging::core::get()->set_filter
             (
@@ -38,7 +38,7 @@ void init_debug_log()
             );
 }
 
-void init_deep_debug_log()
+inline void init_deep_debug_log()
 {
     logging::core::get()->set_filter
             (

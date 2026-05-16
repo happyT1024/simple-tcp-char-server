@@ -8,6 +8,8 @@ boost::asio::io_service Server::m_service;
 std::list<std::shared_ptr<Client>> Server::m_clientsList;
 std::mutex Server::m_mtx;
 
+/// Инициализировать SSL-контекст: загрузить сертификат и ключ, проверить их соответствие.
+/// При ошибке — exit(1).
 void Server::init_ssl_ctx() {
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
@@ -39,12 +41,14 @@ void Server::init_ssl_ctx() {
     }
 }
 
+/// Создать acceptor на указанном порту (IPv4).
 boost::asio::ip::tcp::acceptor Server::create_acceptor(int port) {
     return boost::asio::ip::tcp::acceptor(m_service,
                                           boost::asio::ip::tcp::endpoint(
                                                   boost::asio::ip::tcp::v4(), port));
 }
 
+/// Дождаться нового TCP-подключения и создать Client.
 std::shared_ptr<Client> Server::accept_connection(boost::asio::ip::tcp::acceptor & acceptor) {
     auto client = std::make_shared<Client>(m_messages, m_service, m_last_id, m_ssl_ctx);
     m_last_id++;
@@ -53,20 +57,24 @@ std::shared_ptr<Client> Server::accept_connection(boost::asio::ip::tcp::acceptor
     return client;
 }
 
+/// Выполнить TLS handshake. В случае ошибки — залогировать и вернуть false.
 bool Server::perform_ssl_handshake(const std::shared_ptr<Client> & client) {
     SSL *ssl = SSL_new(m_ssl_ctx);
     SSL_set_fd(ssl, client->sock().native_handle());
     if (SSL_accept(ssl) <= 0) {
-        BOOST_LOG_TRIVIAL(error) << "SSL handshake failed for User id:" << client->get_id();
+        BOOST_LOG_TRIVIAL(error) << "SSL handshake failed for User id:" << client->get_id()
+                                 << " err=" << ERR_error_string(ERR_get_error(), nullptr);
         ERR_print_errors_fp(stderr);
         SSL_free(ssl);
         return false;
     }
+    BOOST_LOG_TRIVIAL(debug) << "SSL handshake successful for User id:" << client->get_id();
     client->sock().non_blocking(true);
     client->set_ssl(ssl);
     return true;
 }
 
+/// Отправить приветственное сообщение новому клиенту.
 void Server::send_greetings(const std::shared_ptr<Client> & client) {
     std::string greetings = "==================================\n"
                             " Welcome to Simple TCP Chat (TLS)\n"
@@ -76,6 +84,7 @@ void Server::send_greetings(const std::shared_ptr<Client> & client) {
     BOOST_LOG_TRIVIAL(trace) << "greetings send";
 }
 
+/// Добавить клиента в общий список (под мьютексом).
 void Server::register_client(const std::shared_ptr<Client> & client) {
     std::lock_guard<std::mutex> lock(m_mtx);
     BOOST_LOG_TRIVIAL(trace) << "m_mtx lock tread accept_thread";
@@ -87,6 +96,7 @@ void Server::register_client(const std::shared_ptr<Client> & client) {
     BOOST_LOG_TRIVIAL(trace) << "m_mtx unlock tread accept_thread";
 }
 
+/// Бесконечный цикл приёма новых подключений: accept → handshake → greetings → регистрация.
 void Server::accept_thread(int port) {
     try {
         init_ssl_ctx();
@@ -141,6 +151,7 @@ void Server::broadcast_messages() {
     }
 }
 
+/// Бесконечный цикл обработки клиентов: обработка сообщений, удаление отключившихся, broadcast.
 void Server::handle_clients_thread() {
     try {
         BOOST_LOG_TRIVIAL(debug) << "Thread handle_clients_thread enable";
@@ -150,6 +161,7 @@ void Server::handle_clients_thread() {
             {
                 std::lock_guard<std::mutex> lock(m_mtx);
                 BOOST_LOG_TRIVIAL(trace) << "m_mtx lock tread handle_clients_thread";
+                BOOST_LOG_TRIVIAL(trace) << "Processing " << m_clientsList.size() << " clients";
 
                 if (m_clientsList.empty()) {
                     BOOST_LOG_TRIVIAL(trace) << "m_mtx unlock tread handle_clients_thread";

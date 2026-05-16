@@ -18,7 +18,7 @@ set(USED_LIBS ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBR
 
 include_directories("header")
 
-file(GLOB LIB_SOURCE
+set(LIB_SOURCE
         "source/Client.cpp"
         "source/Server.cpp"
 )

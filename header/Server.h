@@ -11,6 +11,12 @@
 
 #include <Client.h>
 
+/**
+ * Статический класс-диспетчер TCP/TLS-сервера.
+ *
+ * accept_thread      — бесконечный цикл: accept → SSL handshake → регистрация
+ * handle_clients_thread — бесконечный цикл: обработка → удаление → broadcast
+ */
 class Server {
 public:
     [[noreturn]] static void accept_thread(int port = 8001);

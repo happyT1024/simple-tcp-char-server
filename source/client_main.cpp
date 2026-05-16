@@ -32,6 +32,7 @@ static void print_banner() {
               << ANSI_RESET "\n\n";
 }
 
+/// Вывести строку с ANSI-цветом: Server — синим, остальные — зелёным.
 static void print_colored(const std::string &line) {
     if (line.empty()) {
         std::cout << '\n';
@@ -54,11 +55,16 @@ static void print_colored(const std::string &line) {
     }
 }
 
+/// Фоновый поток: читает данные из TLS-сокета, разбивает по '\n' и выводит цветом.
 void read_thread(SSL *ssl) {
     std::string buf(4096, '\0');
     while (g_running) {
         int ret = SSL_read(ssl, buf.data(), static_cast<int>(buf.size()));
         if (ret <= 0) {
+            int err = SSL_get_error(ssl, ret);
+            if (err != SSL_ERROR_SYSCALL || errno != 0) {
+                std::cerr << "SSL read error: " << err << std::endl;
+            }
             g_running = false;
             break;
         }
@@ -83,6 +89,7 @@ struct ClientConfig {
     int port = 8001;
 };
 
+/// Разобрать аргументы -h HOST и -p PORT.
 static ClientConfig parse_args(int argc, char *argv[]) {
     ClientConfig cfg;
     for (int i = 1; i < argc; ++i) {
@@ -96,6 +103,7 @@ static ClientConfig parse_args(int argc, char *argv[]) {
     return cfg;
 }
 
+/// Инициализировать OpenSSL и создать TLS-контекст клиента (без верификации сертификата).
 static SSL_CTX* init_openssl_client() {
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
@@ -117,6 +125,7 @@ static boost::asio::ip::tcp::socket connect_to_server(boost::asio::io_service & 
     return sock;
 }
 
+/// Выполнить TLS handshake. При ошибке — вывести в cerr и вернуть nullptr.
 static SSL* do_ssl_connect(SSL_CTX *ctx, boost::asio::ip::tcp::socket & sock) {
     SSL *ssl = SSL_new(ctx);
     SSL_set_fd(ssl, sock.native_handle());
@@ -129,6 +138,7 @@ static SSL* do_ssl_connect(SSL_CTX *ctx, boost::asio::ip::tcp::socket & sock) {
     return ssl;
 }
 
+/// Цикл ввода: читает строки из stdin и отправляет через TLS.
 static void run_input_loop(SSL *ssl) {
     std::string input;
     while (g_running && std::getline(std::cin, input)) {
