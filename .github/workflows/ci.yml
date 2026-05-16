@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libboost-all-dev \
+            libssl-dev \
+            libgtest-dev \
+            libgmock-dev \
+            cmake \
+            python3
+
+      - name: Configure
+        run: cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -B build
+
+      - name: Build tests
+        run: cmake --build build --target SimpleTCPChat_tests -j $(nproc)
+
+      - name: Run unit & functional tests
+        run: ./build/SimpleTCPChat_tests
+
+      - name: Build server & client
+        run: cmake --build build --target SimpleTCPChat SimpleTCPChatClient -j $(nproc)
+
+      - name: Stress test
+        if: matrix.build_type == 'Debug'
+        run: python3 tests/stress_test.py
