@@ -87,6 +87,8 @@ void Client::write(std::string &msg) {
         stop();
         return;
     }
+    BOOST_LOG_TRIVIAL(error)<<"User id:"<<m_id<<" write failed after 5 attempts";
+    stop();
 }
 
 bool Client::timed_out() const {
@@ -119,7 +121,7 @@ void Client::read_request() {
         return;
     }
 
-    int ret = SSL_read(m_ssl, *m_buff + m_already_read,
+    int ret = SSL_read(m_ssl, m_buff.data() + m_already_read,
                        static_cast<int>(m_clientCfg.get_m_max_msg() - m_already_read));
     if (ret > 0) {
         m_already_read += static_cast<std::size_t>(ret);
@@ -156,17 +158,18 @@ void Client::new_message(std::string &msg) {
 }
 
 void Client::process_request() {
-    bool found_enter = std::find(*m_buff, *m_buff + m_already_read, '\n') < *m_buff + m_already_read;
+    char* buf = m_buff.data();
+    bool found_enter = std::find(buf, buf + m_already_read, '\n') < buf + m_already_read;
     if (!found_enter) {
         return;
     }
 
     update_ping();
-    size_t pos = std::find(*m_buff, *m_buff + m_already_read, '\n') - *m_buff;
-    std::string msg(*m_buff, pos);
+    size_t pos = std::find(buf, buf + m_already_read, '\n') - buf;
+    std::string msg(buf, pos);
     if (!msg.empty() && msg.back() == '\r')
         msg.pop_back();
-    std::copy(*m_buff + m_already_read, *m_buff + m_clientCfg.get_m_max_msg(), *m_buff);
+    std::copy(buf + m_already_read, buf + m_clientCfg.get_m_max_msg(), buf);
     m_already_read -= pos + 1;
 
     if (m_username.empty()) {

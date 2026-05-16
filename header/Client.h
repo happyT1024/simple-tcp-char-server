@@ -4,9 +4,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#include <gtest/gtest.h>
-
 #include <queue>
+#include <vector>
 
 #include <ClientCfg.h>
 
@@ -23,7 +22,7 @@ public:
         m_sock = std::make_unique<boost::asio::ip::tcp::socket>(
             boost::asio::ip::tcp::socket(service));
         m_ssl = SSL_new(ssl_ctx);
-        m_buff = std::make_unique<char*>(new char[m_clientCfg.get_m_max_msg()]);
+        m_buff.resize(m_clientCfg.get_m_max_msg());
     }
 
     Client& operator=(Client other);
@@ -70,7 +69,7 @@ private:
     bool m_user_exit;
     unsigned long long m_id;
     std::size_t m_already_read;
-    std::unique_ptr<char*> m_buff;
+    std::vector<char> m_buff;
     std::string m_username;
     boost::posix_time::ptime m_last_ping;
     std::queue<std::pair<std::string, std::string>> & m_messages;
