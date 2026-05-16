@@ -12,24 +12,31 @@ if(Boost_FOUND)
     link_directories(${Boost_LIBRARY_DIRS})
 endif(Boost_FOUND)
 
+find_package(OpenSSL REQUIRED)
+
 set(USED_LIBS ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_LOG_LIBRARY})
 
 include_directories("header")
 
-file(GLOB SOURCE
-        "source/*.cpp"
+file(GLOB LIB_SOURCE
+        "source/Client.cpp"
+        "source/Server.cpp"
 )
 
-add_executable(${PROJECT_NAME} ${SOURCE})
+# Сервер
+add_executable(${PROJECT_NAME} ${LIB_SOURCE} "source/main.cpp")
+target_link_libraries(${PROJECT_NAME} -lboost_log_setup ${USED_LIBS} OpenSSL::SSL OpenSSL::Crypto)
 
-target_link_libraries(${PROJECT_NAME} -lboost_log_setup ${USED_LIBS} )
+# Клиент
+add_executable(${PROJECT_NAME}Client ${LIB_SOURCE} "source/client_main.cpp")
+target_link_libraries(${PROJECT_NAME}Client -lboost_log_setup ${USED_LIBS} OpenSSL::SSL OpenSSL::Crypto)
 
 if(TESTS)
     enable_testing()
     find_package(GTest REQUIRED)
-    add_library(${PROJECT_NAME}_lib ${SOURCE})
+    add_library(${PROJECT_NAME}_lib ${LIB_SOURCE})
     include_directories("tests")
-    target_link_libraries(${PROJECT_NAME}_lib -lboost_log_setup ${USED_LIBS})
-    add_executable(${PROJECT_NAME}_tests tests/main.cpp)
+    target_link_libraries(${PROJECT_NAME}_lib -lboost_log_setup ${USED_LIBS} OpenSSL::SSL OpenSSL::Crypto)
+    add_executable(${PROJECT_NAME}_tests "tests/main.cpp")
     target_link_libraries(${PROJECT_NAME}_tests SimpleTCPChat_lib -lgtest -lpthread -lgmock)
 endif()
